@@ -13,13 +13,11 @@ class RegisterUserUseCase implements UseCase<void, RegisterParams> {
 
   @override
   Future<Either<Failure, void>> call(RegisterParams params) async {
-    const role = UserRole.mechanic;
-
     final registrationResult = await repository.registerUser(
       params.email,
       params.password,
       params.name,
-      role,
+      params.role,
     );
 
     return registrationResult.fold(
@@ -36,10 +34,12 @@ class RegisterParams {
   final String name;
   final String email;
   final String password;
+  final UserRole role;
 
   RegisterParams({
     required this.name,
     required this.email,
     required this.password,
+    required this.role,
   });
 }

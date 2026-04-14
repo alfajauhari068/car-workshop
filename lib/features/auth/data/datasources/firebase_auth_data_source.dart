@@ -19,19 +19,33 @@ class FirebaseAuthDataSource implements UserRemoteDataSource {
   Future<Either<Failure, UserModel>> registerUser(
       String email, String password, String name, UserRole role) async {
     try {
+      // Validate email and password
+      if (email.isEmpty || password.isEmpty) {
+        return const Left(ServerFailure('Email and password cannot be empty.'));
+      }
+      if (password.length < 6) {
+        return const Left(ServerFailure('Password must be at least 6 characters.'));
+      }
+
       UserCredential userCredential =
           await firebaseAuth.createUserWithEmailAndPassword(
-        email: email,
+        email: email.toLowerCase().trim(),
         password: password,
       );
 
       if (userCredential.user != null) {
         final userModel = UserModel(
           id: userCredential.user!.uid,
-          email: email,
+          email: email.toLowerCase().trim(),
           name: name,
           role: role,
         );
+
+        // Save user data to Firestore
+        await fireStore
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set(userModel.toJson());
 
         authService.setCurrentUser(userModel);
         return Right(userModel);
@@ -39,9 +53,11 @@ class FirebaseAuthDataSource implements UserRemoteDataSource {
         return const Left(ServerFailure('User creation failed.'));
       }
     } on FirebaseAuthException catch (e) {
+      print('Firebase Auth Error (Register): ${e.code} - ${e.message}');
       return Left(
           ServerFailure(e.message ?? 'An error occurred during registration.'));
     } catch (error) {
+      print('Error (Register): $error');
       return Left(ServerFailure(error.toString()));
     }
   }
@@ -50,9 +66,18 @@ class FirebaseAuthDataSource implements UserRemoteDataSource {
   Future<Either<Failure, UserModel>> loginUser(
       String email, String password) async {
     try {
+      // Normalize email (lowercase and trim)
+      final normalizedEmail = email.toLowerCase().trim();
+      
+      if (normalizedEmail.isEmpty || password.isEmpty) {
+        return const Left(ServerFailure('Email and password cannot be empty.'));
+      }
+
+      print('Attempting login with email: $normalizedEmail');
+      
       UserCredential userCredential =
           await firebaseAuth.signInWithEmailAndPassword(
-        email: email,
+        email: normalizedEmail,
         password: password,
       );
 
@@ -67,15 +92,32 @@ class FirebaseAuthDataSource implements UserRemoteDataSource {
           authService.setCurrentUser(userModel);
           return Right(userModel);
         } else {
-          return const Left(ServerFailure('User data not found.'));
+          // If user document doesn't exist, create it
+          print('User document not found, creating new document');
+          final userModel = UserModel(
+            id: userCredential.user!.uid,
+            email: normalizedEmail,
+            name: userCredential.user!.displayName ?? 'User',
+            role: UserRole.mechanic,
+          );
+          
+          await fireStore
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .set(userModel.toJson());
+              
+          authService.setCurrentUser(userModel);
+          return Right(userModel);
         }
       } else {
         return const Left(ServerFailure('Login failed. Please try again.'));
       }
     } on FirebaseAuthException catch (e) {
+      print('Firebase Auth Error (Login): ${e.code} - ${e.message}');
       return Left(
           ServerFailure(e.message ?? 'An error occurred during login.'));
     } catch (error) {
+      print('Error (Login): $error');
       return Left(ServerFailure(error.toString()));
     }
   }

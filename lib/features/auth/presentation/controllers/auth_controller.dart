@@ -20,10 +20,10 @@ class AuthController extends GetxController {
   var isLoading = false.obs;
   var failureMessage = ''.obs;
 
-  Future<void> register(String name, String email, String password) async {
+  Future<void> register(String name, String email, String password, dynamic role) async {
     isLoading.value = true;
     final result = await registerUserUseCase
-        .call(RegisterParams(name: name, email: email, password: password));
+        .call(RegisterParams(name: name, email: email, password: password, role: role));
     isLoading.value = false;
 
     result.fold(

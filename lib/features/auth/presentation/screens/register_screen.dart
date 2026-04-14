@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../../../../core/common/widgets/widgets.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/enums/user_role.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/style/app_fonts.dart';
 import '../../presentation/controllers/auth_controller.dart';
@@ -19,6 +20,7 @@ class RegisterScreen extends StatelessWidget {
     final TextEditingController nameController = TextEditingController();
     final TextEditingController emailController = TextEditingController();
     final TextEditingController passwordController = TextEditingController();
+    final Rx<UserRole?> selectedRole = Rx<UserRole?>(null);
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -33,7 +35,6 @@ class RegisterScreen extends StatelessWidget {
                 semanticsLabel: 'Loader',
                 width: 250.w,
                 height: 250.h,
-                // color: AppColors.primary,
               ),
               SizedBox(height: 20.h),
               Text(
@@ -62,18 +63,40 @@ class RegisterScreen extends StatelessWidget {
               ),
               SizedBox(height: 20.h),
               Obx(
+                () => DropdownButton<UserRole>(
+                  hint: const Text('Select Your Role'),
+                  value: selectedRole.value,
+                  isExpanded: true,
+                  items: UserRole.values.map((role) {
+                    return DropdownMenuItem<UserRole>(
+                      value: role,
+                      child: Text(
+                        role.toString().split('.').last.toUpperCase(),
+                        style: TextStyle(fontSize: 16.sp),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (role) {
+                    selectedRole.value = role;
+                  },
+                ),
+              ),
+              SizedBox(height: 20.h),
+              Obx(
                 () => CustomButton(
                   labelText: authController.isLoading.value
                       ? AppStrings.pleaseWait
                       : AppStrings.register,
-                  onPressed: authController.isLoading.value
+                  onPressed: authController.isLoading.value ||
+                          selectedRole.value == null
                       ? null
                       : () {
                           final String name = nameController.text.trim();
                           final String email = emailController.text.trim();
                           final String password =
                               passwordController.text.trim();
-                          authController.register(name, email, password);
+                          final UserRole role = selectedRole.value!;
+                          authController.register(name, email, password, role);
                         },
                 ),
               ),
