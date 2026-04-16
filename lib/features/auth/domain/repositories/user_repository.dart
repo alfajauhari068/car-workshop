@@ -11,5 +11,7 @@ abstract class UserRepository {
 
   Future<Either<Failure, void>> createUser(UserEntity user);
 
+  Future<Either<Failure, UserEntity>> updateUserProfile(String uid, List<String>? skills, String? yearsOfExperience);
+
   Future<Either<Failure, List<UserEntity>>> getAllMechanics();
 }

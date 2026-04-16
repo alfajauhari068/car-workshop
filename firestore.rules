@@ -1,0 +1,202 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ========================================================================
+    // HELPER FUNCTIONS
+    // ========================================================================
+    
+    /// Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    /// Get current user ID
+    function userId() {
+      return request.auth.uid;
+    }
+    
+    /// Check if user is member of workshop (via FLAT workshop_staff collection)
+    /// Document ID format: '{userId}_{workshopId}'
+    function isWorkshopMember(workshopId) {
+      return exists(/databases/$(database)/documents/workshop_staff/$(userId()+'_'+workshopId))
+          || get(/databases/$(database)/documents/workshops/$(workshopId)).data.owner_id == userId();
+    }
+    
+    /// Get user's role in workshop from FLAT workshop_staff collection
+    /// Document ID: '{userId}_{workshopId}'
+    function getUserRoleInWorkshop(workshopId) {
+      let staffDocId = userId()+'_'+workshopId;
+      let staffDoc = get(/databases/$(database)/documents/workshop_staff/$(staffDocId));
+      return staffDoc.data.role;
+    }
+    
+    /// Check if user has specific role in workshop
+    function hasRole(workshopId, role) {
+      return getUserRoleInWorkshop(workshopId) == role
+          || get(/databases/$(database)/documents/workshops/$(workshopId)).data.owner_id == userId();
+    }
+    
+    /// Check if user is owner or manager
+    function isOwnerOrManager(workshopId) {
+      return get(/databases/$(database)/documents/workshops/$(workshopId)).data.owner_id == userId()
+          || getUserRoleInWorkshop(workshopId) in ['owner', 'manager'];
+    }
+    
+    /// Check if user is mechanic
+    function isMechanic(workshopId) {
+      return getUserRoleInWorkshop(workshopId) == 'mechanic';
+    }
+    
+    // ========================================================================
+    // USERS COLLECTION
+    // Rules: Only read/write own document
+    // ========================================================================
+    match /users/{document=**} {
+      allow read: if isAuthenticated() && userId() == document;
+      allow write: if isAuthenticated() && userId() == document;
+    }
+    
+    // ========================================================================
+    // WORKSHOPS COLLECTION
+    // Rules: Owner has full access, members can read
+    // ========================================================================
+    match /workshops/{workshopId} {
+      // Read: Owner or workshop members
+      allow read: if isAuthenticated() && 
+                     (get(resource.data).owner_id == userId() || 
+                      isWorkshopMember(workshopId));
+      
+      // Create: Authenticated user (becomes owner)
+      allow create: if isAuthenticated() && 
+                       request.resource.data.owner_id == userId();
+      
+      // Update: Owner only
+      allow update: if isAuthenticated() && 
+                       get(resource.data).owner_id == userId();
+      
+      // Delete: Owner only
+      allow delete: if isAuthenticated() && 
+                       get(resource.data).owner_id == userId();
+      
+      // ======================================================================
+      // BRANCHES (Subcollection of workshops)
+      // Rules: Workshop members can read, owner/manager can write
+      // ======================================================================
+      match /branch/{branchId} {
+        // Read: Workshop members
+        allow read: if isAuthenticated() && isWorkshopMember(workshopId);
+        
+        // Create: Owner or Manager
+        allow create: if isAuthenticated() && isOwnerOrManager(workshopId) && 
+                        request.resource.data.workshop_id == workshopId;
+        
+        // Update: Owner or Manager
+        allow update: if isAuthenticated() && isOwnerOrManager(workshopId) && 
+                        resource.data.workshop_id == workshopId;
+        
+        // Delete: Owner only
+        allow delete: if isAuthenticated() && 
+                        get(/databases/$(database)/documents/workshops/$(workshopId)).data.owner_id == userId();
+      }
+      
+      // ======================================================================
+      // SERVICES (Subcollection of workshops)
+      // Rules: Workshop members can read, owner/manager can write
+      // ======================================================================
+      match /service/{serviceId} {
+        // Read: Workshop members
+        allow read: if isAuthenticated() && isWorkshopMember(workshopId);
+        
+        // Create: Owner or Manager
+        allow create: if isAuthenticated() && isOwnerOrManager(workshopId) && 
+                        request.resource.data.workshop_id == workshopId;
+        
+        // Update: Owner or Manager
+        allow update: if isAuthenticated() && isOwnerOrManager(workshopId) && 
+                        resource.data.workshop_id == workshopId;
+        
+        // Delete: Owner only
+        allow delete: if isAuthenticated() && 
+                        get(/databases/$(database)/documents/workshops/$(workshopId)).data.owner_id == userId();
+      }
+    }
+    
+    // ========================================================================
+    // WORKSHOP_STAFF COLLECTION (Flat - NOT Nested)
+    // Rules: Document ID = '{userId}_{workshopId}' (composite key)
+    // Everyone including owner must be in this collection
+    // ========================================================================
+    match /workshop_staff/{staffId} {
+      // Extract userId and workshopId from composite key
+      let parts = staffId.split('_');
+      let staffUserId = parts[0];
+      let staffWorkshopId = parts[1];
+      
+      // Read: Self, or workshop owner/manager
+      allow read: if isAuthenticated() && 
+                     (userId() == staffUserId || 
+                      get(/databases/$(database)/documents/workshops/$(staffWorkshopId)).data.owner_id == userId() ||
+                      isOwnerOrManager(staffWorkshopId));
+      
+      // Create: Owner or Manager adding new staff
+      allow create: if isAuthenticated() && 
+                       isOwnerOrManager(staffWorkshopId) &&
+                       request.resource.data.workshop_id == staffWorkshopId;
+      
+      // Update: Owner or Manager (changing role/status)
+      allow update: if isAuthenticated() && 
+                       isOwnerOrManager(staffWorkshopId) &&
+                       resource.data.workshop_id == staffWorkshopId &&
+                       // Prevent privilege escalation
+                       (userId()) != staffUserId || request.resource.data.role == resource.data.role;
+      
+      // Delete: Owner only
+      allow delete: if isAuthenticated() && 
+                       get(/databases/$(database)/documents/workshops/$(staffWorkshopId)).data.owner_id == userId();
+    }
+    
+    // ========================================================================
+    // BOOKINGS COLLECTION (Global - not nested)
+    // Rules: Progressive access based on role
+    // Format: Each booking doc has {workshop_id, user_id, ...}
+    // ========================================================================
+    match /bookings2/{bookingId} {
+      // Read: Workshop members
+      allow read: if isAuthenticated() && 
+                     isWorkshopMember(resource.data.workshop_id);
+      
+      // Create: Workshop members (owner, manager, mechanic)
+      allow create: if isAuthenticated() && 
+                       isWorkshopMember(request.resource.data.workshop_id) &&
+                       request.resource.data.workshop_id != null &&
+                       request.resource.data.user_id == userId();
+      
+      // Update: Owner, Manager, or the user who created booking
+      allow update: if isAuthenticated() && 
+                       (isOwnerOrManager(resource.data.workshop_id) ||
+                        resource.data.user_id == userId()) &&
+                       // Prevent changing workshop_id
+                       request.resource.data.workshop_id == resource.data.workshop_id;
+      
+      // Delete: Owner or Manager only
+      allow delete: if isAuthenticated() && 
+                       isOwnerOrManager(resource.data.workshop_id);
+      
+      // ======================================================================
+      // BOOKING_TASKS (Subcollection of bookings)
+      // Rules: Same as parent booking
+      // ======================================================================
+      match /booking_tasks/{taskId} {
+        allow read, write: if isAuthenticated() && 
+                              isWorkshopMember(get(/databases/$(database)/documents/bookings2/$(bookingId)).data.workshop_id);
+      }
+    }
+    
+    // ========================================================================
+    // DEFAULT DENY ALL
+    // ========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

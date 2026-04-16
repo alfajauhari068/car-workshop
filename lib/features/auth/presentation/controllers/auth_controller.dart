@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/errors/failure.dart';
 import '../../../../core/routes/app_routes.dart';
+import '../../../../core/routes/role_based_router.dart';
 import '../../../../core/services/snackbar_service.dart';
 import '../../../../core/usecase/no_params.dart';
 import '../../domain/usecases/login_use_case.dart';
@@ -50,7 +51,9 @@ class AuthController extends GetxController {
         SnackbarService.showErrorMessage(failure.message);
       },
       (_) {
-        Get.offAllNamed(AppRoutes.bookings);
+        SnackbarService.showSuccessMessage('Login berhasil!');
+        // Redirect ke halaman sesuai role
+        RoleBasedRouter.redirectUser();
       },
     );
   }

@@ -8,6 +8,9 @@ class UserModel extends UserEntity {
     required super.email,
     required super.name,
     required super.role,
+    super.profileComplete = false,
+    super.skills,
+    super.yearsOfExperience,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -17,6 +20,9 @@ class UserModel extends UserEntity {
       name: json['name'] as String,
       role: UserRole.values
           .firstWhere((e) => e.toString() == 'UserRole.${json['role']}'),
+      profileComplete: json['profileComplete'] as bool? ?? false,
+      skills: (json['skills'] as List<dynamic>?)?.cast<String>(),
+      yearsOfExperience: json['yearsOfExperience'] as String?,
     );
   }
 
@@ -26,6 +32,9 @@ class UserModel extends UserEntity {
       'email': email,
       'name': name,
       'role': role.toString().split('.').last, // Convert enum to string
+      'profileComplete': profileComplete,
+      'skills': skills,
+      'yearsOfExperience': yearsOfExperience,
     };
   }
 

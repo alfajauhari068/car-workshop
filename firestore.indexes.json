@@ -1,0 +1,135 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "workshop_staff",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "user_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "workshop_id",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "workshop_staff",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "workshop_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "role",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "bookings2",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "workshop_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "booking_date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "bookings2",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "workshop_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "bookings2",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "workshop_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "booking_date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "bookings2",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "user_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "booking_date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "branch",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "workshop_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "service",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "workshop_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "workshops",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "owner_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -38,4 +38,10 @@ class UserRepositoryImpl implements UserRepository {
     final userModel = user.toModel();
     return await remoteDataSource.createUser(userModel);
   }
+
+  @override
+  Future<Either<Failure, UserEntity>> updateUserProfile(String uid, List<String>? skills, String? yearsOfExperience) async {
+    final result = await remoteDataSource.updateUserProfile(uid, skills, yearsOfExperience);
+    return result.map((userModel) => userModel.toEntity());
+  }
 }

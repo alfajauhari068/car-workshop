@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/enums/user_role.dart';
 import '../../../../core/errors/failure.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/utils/logger_util.dart';
 import '../models/user_model.dart';
 
 class FirebaseAuthDataSource implements UserRemoteDataSource {
@@ -53,11 +54,11 @@ class FirebaseAuthDataSource implements UserRemoteDataSource {
         return const Left(ServerFailure('User creation failed.'));
       }
     } on FirebaseAuthException catch (e) {
-      print('Firebase Auth Error (Register): ${e.code} - ${e.message}');
+      Logger.error('Firebase Auth Error (Register): ${e.code} - ${e.message}');
       return Left(
           ServerFailure(e.message ?? 'An error occurred during registration.'));
     } catch (error) {
-      print('Error (Register): $error');
+      Logger.error('Error (Register): $error');
       return Left(ServerFailure(error.toString()));
     }
   }
@@ -73,7 +74,7 @@ class FirebaseAuthDataSource implements UserRemoteDataSource {
         return const Left(ServerFailure('Email and password cannot be empty.'));
       }
 
-      print('Attempting login with email: $normalizedEmail');
+      Logger.info('Attempting login with email: $normalizedEmail');
       
       UserCredential userCredential =
           await firebaseAuth.signInWithEmailAndPassword(
@@ -93,7 +94,7 @@ class FirebaseAuthDataSource implements UserRemoteDataSource {
           return Right(userModel);
         } else {
           // If user document doesn't exist, create it
-          print('User document not found, creating new document');
+          Logger.info('User document not found, creating new document');
           final userModel = UserModel(
             id: userCredential.user!.uid,
             email: normalizedEmail,
@@ -113,11 +114,11 @@ class FirebaseAuthDataSource implements UserRemoteDataSource {
         return const Left(ServerFailure('Login failed. Please try again.'));
       }
     } on FirebaseAuthException catch (e) {
-      print('Firebase Auth Error (Login): ${e.code} - ${e.message}');
+      Logger.error('Firebase Auth Error (Login): ${e.code} - ${e.message}');
       return Left(
           ServerFailure(e.message ?? 'An error occurred during login.'));
     } catch (error) {
-      print('Error (Login): $error');
+      Logger.error('Error (Login): $error');
       return Left(ServerFailure(error.toString()));
     }
   }
@@ -170,6 +171,36 @@ class FirebaseAuthDataSource implements UserRemoteDataSource {
       await fireStore.collection('users').doc(user.id).set(user.toJson());
       return const Right(null);
     } catch (error) {
+      return Left(ServerFailure(error.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, UserModel>> updateUserProfile(String uid, List<String>? skills, String? yearsOfExperience) async {
+    try {
+      // Update user document with profile info
+      await fireStore.collection('users').doc(uid).update({
+        'skills': skills,
+        'yearsOfExperience': yearsOfExperience,
+        'profileComplete': true, // Mark profile as complete
+      });
+
+      // Retrieve updated user data
+      final userDoc = await fireStore
+          .collection('users')
+          .doc(uid)
+          .get();
+
+      if (userDoc.exists) {
+        final updatedUser = UserModel.fromJson(userDoc.data()!);
+        // Update AuthService with new user data
+        authService.setCurrentUser(updatedUser);
+        return Right(updatedUser);
+      } else {
+        return const Left(ServerFailure('User not found'));
+      }
+    } catch (error) {
+      Logger.error('Error updating user profile: $error');
       return Left(ServerFailure(error.toString()));
     }
   }

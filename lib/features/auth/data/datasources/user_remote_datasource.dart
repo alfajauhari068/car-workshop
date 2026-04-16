@@ -10,4 +10,5 @@ abstract class UserRemoteDataSource {
   Future<Either<Failure, List<UserModel>>> getAllMechanics();
   Future<Either<Failure, UserModel>> getUserById(String id);
   Future<Either<Failure, void>> createUser(UserModel user);
+  Future<Either<Failure, UserModel>> updateUserProfile(String uid, List<String>? skills, String? yearsOfExperience);
 }

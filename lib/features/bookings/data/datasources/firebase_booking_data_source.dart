@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../../../../core/errors/failure.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/utils/logger_util.dart';
 import '../models/booking_model.dart';
 
 class FirebaseBookingDataSource implements BookingRemoteDataSource {
@@ -83,22 +84,15 @@ class FirebaseBookingDataSource implements BookingRemoteDataSource {
           .where('startDateTime', isGreaterThanOrEqualTo: startOfDay)
           .where('startDateTime', isLessThanOrEqualTo: endOfDay);
 
+      // Apply mechanic filter if user is a mechanic (composite query with Firestore indexes)
+      if (user?.role.name == 'mechanic') {
+        query = query.where('mechanic.id', isEqualTo: user?.id ?? "");
+      }
+
       final snapshot = await query.get();
       final bookings = snapshot.docs.map((doc) {
         return BookingModel.fromJson(doc.data() as Map<String, dynamic>);
       }).toList();
-
-      // TODO: implement composite query in firestore
-      // if (user?.role.name == 'mechanic') {
-      //   query = query.where('mechanic.id', isEqualTo: user?.id ?? "");
-      // }
-      if (user?.role.name == 'mechanic') {
-        final mechanicId = user?.id ?? "";
-        final filteredBookings = bookings
-            .where((booking) => booking.mechanic.id == mechanicId)
-            .toList();
-        return Right(filteredBookings);
-      }
 
       return Right(bookings);
     } catch (error) {
@@ -151,7 +145,7 @@ class FirebaseBookingDataSource implements BookingRemoteDataSource {
   @override
   Future<Either<Failure, void>> deleteBooking(String id) async {
     try {
-      print("DELETING BOOKING ID: $id");
+      Logger.info("DELETING BOOKING ID: $id");
       await fireStore.collection('bookings').doc(id).delete();
       return const Right(null);
     } catch (error) {

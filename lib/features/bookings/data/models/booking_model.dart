@@ -8,6 +8,9 @@ import 'customer_model.dart';
 class BookingModel extends BookingEntity {
   const BookingModel({
     required super.id,
+    required super.workshopId,
+    required super.branchId,
+    required super.serviceId,
     required CarModel super.car,
     required CustomerModel super.customer,
     required super.title,
@@ -19,6 +22,9 @@ class BookingModel extends BookingEntity {
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     return BookingModel(
       id: json['id'] as String,
+      workshopId: json['workshop_id'] as String,
+      branchId: json['branch_id'] as String,
+      serviceId: json['service_id'] as String,
       car: CarModel.fromJson(json['car'] as Map<String, dynamic>),
       customer:
           CustomerModel.fromJson(json['customer'] as Map<String, dynamic>),
@@ -32,6 +38,9 @@ class BookingModel extends BookingEntity {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'workshop_id': workshopId,
+      'branch_id': branchId,
+      'service_id': serviceId,
       'car': (car as CarModel).toJson(),
       'customer': (customer as CustomerModel).toJson(),
       'title': title,
@@ -44,6 +53,9 @@ class BookingModel extends BookingEntity {
   BookingEntity toEntity() {
     return BookingEntity(
       id: id,
+      workshopId: workshopId,
+      branchId: branchId,
+      serviceId: serviceId,
       car: (car as CarModel).toEntity(),
       customer: (customer as CustomerModel).toEntity(),
       title: title,

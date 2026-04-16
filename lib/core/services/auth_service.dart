@@ -16,6 +16,14 @@ class AuthService {
   UserModel? get currentUser => _currentUser;
 
   bool get isMechanic => _currentUser?.role == UserRole.mechanic;
+  
+  bool get isWorkshopOwner => _currentUser?.role == UserRole.workshopOwner;
+  
+  bool get isAdmin => _currentUser?.role == UserRole.admin;
+  
+  bool get isCustomer => _currentUser?.role == UserRole.customer;
+  
+  UserRole? get userRole => _currentUser?.role;
 
   void setCurrentUser(UserModel user) {
     _currentUser = user;

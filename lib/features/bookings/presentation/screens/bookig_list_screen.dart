@@ -107,7 +107,7 @@ class _BookingsListScreenState extends State<BookingsListScreen> {
             ? FloatingActionButton(
                 backgroundColor: AppColors.primary,
                 onPressed: () {
-                  Get.to(() => AddBookingScreen());
+                  Get.to(() => const AddBookingScreen());
                 },
                 tooltip: 'Add Booking',
                 child: const Icon(
